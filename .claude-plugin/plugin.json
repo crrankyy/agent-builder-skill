@@ -1,0 +1,22 @@
+{
+  "name": "agent-builder",
+  "displayName": "Agent Builder",
+  "version": "0.1.0",
+  "description": "Plan a new AI agent before any code is written. A plan-mode interview for the Claude Agent SDK, the Claude API, Claude Code-native setups or LangGraph: Claude recommends, you decide every choice.",
+  "author": {
+    "name": "crrankyy",
+    "url": "https://github.com/crrankyy"
+  },
+  "homepage": "https://github.com/crrankyy/agent-builder-skill#readme",
+  "repository": "https://github.com/crrankyy/agent-builder-skill",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "planning",
+    "plan-mode",
+    "architecture",
+    "claude-agent-sdk",
+    "langgraph",
+    "multi-agent"
+  ]
+}
