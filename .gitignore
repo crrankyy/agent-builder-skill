@@ -1,0 +1,13 @@
+# Local reference material (not distributed)
+ref/
+latex/
+
+# Eval run output
+evals/results/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS / editor
+.DS_Store
