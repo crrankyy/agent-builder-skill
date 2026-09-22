@@ -1,0 +1,20 @@
+{
+  // Markdown lint configuration (markdownlint-cli2).
+  "config": {
+    "default": true,
+    "MD013": false,            // long lines are fine in prose and tables
+    "MD024": { "siblings_only": true },
+    "MD033": { "allowed_elements": ["br"] },
+    "MD036": false,            // bold labels are used as pseudo-headings in references
+    "MD041": false,            // eval prompt and grader files start with frontmatter
+    "MD060": false             // compact table delimiter rows (|---|) are fine
+  },
+  "ignores": [
+    "ref/**",
+    "latex/**",
+    "evals/results/**",
+    // verbatim skill output, kept unedited on purpose (see examples/README.md)
+    "examples/multi-source-research-agent/**",
+    "node_modules/**"
+  ]
+}

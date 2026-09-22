@@ -1,0 +1,40 @@
+{
+  "description": "agent-builder plan guard: while an agent plan is being drafted, blocks file writes (except the plan file) and state-changing shell commands. Inactive otherwise.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/skills/agent-builder/scripts/plan_guard.py\" hook",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/skills/agent-builder/scripts/plan_guard.py\" hook",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/skills/agent-builder/scripts/plan_guard.py\" hook",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

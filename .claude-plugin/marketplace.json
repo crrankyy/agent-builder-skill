@@ -1,0 +1,16 @@
+{
+  "name": "crrankyy",
+  "description": "Claude Code plugins by crrankyy.",
+  "owner": {
+    "name": "crrankyy",
+    "url": "https://github.com/crrankyy"
+  },
+  "plugins": [
+    {
+      "name": "agent-builder",
+      "source": "./",
+      "description": "Plan-mode interview that turns an agent idea into an approved, executable build plan. Claude recommends, you decide.",
+      "category": "development"
+    }
+  ]
+}

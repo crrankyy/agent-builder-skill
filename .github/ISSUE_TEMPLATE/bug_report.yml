@@ -1,0 +1,50 @@
+name: Bug report
+description: Something in the skill, the plan guard or the plans it writes is wrong.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for the report. Please don't paste secrets or private code.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did agent-builder do, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Your prompt (or a redacted version) and the answers that led to the problem.
+      placeholder: |
+        1. /agent-builder ...
+        2. Answered ...
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Where did you run it?
+      options:
+        - Claude Code CLI (interactive)
+        - Headless claude -p
+        - VS Code extension
+        - Desktop app
+        - Web
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Output of `claude --version`, and the agent-builder version from /plugin.
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Permission mode, plan-guard messages, relevant excerpts from the plan.
