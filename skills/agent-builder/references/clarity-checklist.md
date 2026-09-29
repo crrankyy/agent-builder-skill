@@ -60,8 +60,9 @@ Any of these in the request means a follow-up question is required:
    and non-goals. Offer concrete options drawn from the request, plus the
    automatic "Other". Where no sensible options exist (e.g. "name the systems"),
    ask in plain text.
-4. After each round, update the statuses. Follow up any "Other" free text that
-   is still ambiguous: restate your reading and ask for confirmation.
+4. After each round, update the statuses and run the consistency pass
+   (`consistency-checks.md`). Follow up any "Other" free text that is still
+   ambiguous: restate your reading and ask for confirmation.
 5. Repeat until all required dimensions are Clear and none is Conflicting.
 
 ## Purpose statement template
@@ -71,13 +72,14 @@ Any of these in the request means a follow-up question is required:
 > `{approval points}`. Success means `{criteria}`. Out of scope: `{non-goals}`.
 > Constraints: `{constraints, or "none stated"}`.
 
-Present it in a question (header `Purpose`) with options:
+Quote the full statement verbatim in your reply text. Writing it to the plan
+file doesn't count as presenting it. Then ask (header `Purpose`):
 
 - **Confirm purpose** (Recommended). Every dimension is marked Clear.
 - **Edit it.** Say what to change (follow up in plain text).
 - **Keep clarifying.** Something important is still missing.
 
 Only **Confirm** passes the gate. Log the confirmed text verbatim as decision
-`D-00`. Next, ask for the agent-name slug used for `.agent-builder/{agent-name}/`.
-Recommend a short kebab-case name derived from the purpose; the user may pick
-another.
+`D-00`. Then derive the agent-name slug used for `.agent-builder/{agent-name}/`:
+a short kebab-case name from the confirmed purpose. Put it in the P6
+derived-details bundle, where the user can change it; don't ask it on its own.

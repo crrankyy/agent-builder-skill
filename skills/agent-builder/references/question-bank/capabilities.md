@@ -35,6 +35,9 @@ context and memory, then the multi-agent details.
 - **Look up live:** the server's existence, maintainer, auth method and required
   scopes.
 - **Conflicts:** no human approval ↔ write scopes.
+- **Follow-up:** if the chosen option leaves the user owing an input (for
+  example "you maintain a template per bank"), ask for it in the same or the
+  next round: the list of banks, sample messages, account names.
 - **Ledger key:** `tools.integrations.{system}`.
 
 ## C-03 Tool response limits
@@ -191,3 +194,20 @@ context and memory, then the multi-agent details.
 - **Applies when:** always.
 - **Look up live:** structured-output support in the chosen runtime and model.
 - **Ledger key:** `output_format`.
+
+## C-13 Reporting period
+
+- **Header:** `Period`
+- **Question:** "What bounds a {period} for {metric or output}?" In the same
+  round, ask which timezone applies and which date places an item in a period
+  (for example the transaction date or the date the message arrived).
+- **Options** (a fact question, so no recommendation):
+  - **Calendar {period}.** Means: boundaries at midnight in the chosen
+    timezone.
+  - **Billing or statement cycle.** Means: the user names the closing day.
+  - **Rolling window** (for example the last 30 days). Means: totals shift
+    daily.
+- **Applies when:** the purpose, a metric or an output names a period (day,
+  week, month) or a total over time.
+- **Never a derived detail:** a boundary chosen silently changes every total.
+- **Ledger key:** `period`.

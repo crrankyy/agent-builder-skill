@@ -22,9 +22,14 @@ decision says so (reference its ID).
 - Execute the steps in order. After each step, run its acceptance check. Continue
   only when the check passes.
 - If a step can't be done as written (a tool is missing, an API changed, a
-  decision turns out to be impossible), **stop and ask the user**. Never
-  substitute your own choice. Record the outcome as an amendment in
-  `.agent-builder/{agent-name}/decisions.md`.
+  decision turns out to be impossible), or a change would alter a decision,
+  **stop and ask the user**. Never substitute your own choice.
+- Any difference from a step's **Do** text is an amendment, improvements
+  included. Record every one in `.agent-builder/{agent-name}/decisions.md`.
+- If an eval metric fails, **stop and ask** with AskUserQuestion. Name the
+  failing metric and your diagnosis, and offer: fix the code, fix the metric, or
+  accept the result. Never edit prompts, code or anything under the evals folder
+  after seeing a failing result without that answer.
 - Never write secret values into files or logs; use the variable names listed
   in §5.
 - Writes to `.claude/` or `.mcp.json` always ask for approval, even in auto mode.
@@ -76,22 +81,23 @@ If a precondition isn't met, stop and ask the user.
    there, use the next free version suffix (`plan-v2.md` / `decisions-v2.md`,
    then `-v3`, …). Never overwrite.
 2. Copy this plan file byte-for-byte into that folder:
-   `cp "{plan-file path}" .agent-builder/{agent-name}/plan{suffix}.md`.
-   Then delete the one line of that copy that contains the absolute plan-file
-   path, so the home directory isn't committed.
+   `cp "{plan-file path, with $HOME for the home directory}" .agent-builder/{agent-name}/plan{suffix}.md`.
 3. Write Appendix A of this plan into `decisions{suffix}.md` in the same folder.
    If this plan was edited at approval time, list the differences between §2 and
    Appendix A at the top of `decisions{suffix}.md` as "Amendments at approval".
 4. Apply the `.agent-builder/` git decision ({D-id}): {commit it | add
    `.agent-builder/` to `.gitignore`}.
 
-**Acceptance:** both files exist; `git check-ignore -q .agent-builder` exits
-{1 if committed | 0 if ignored} (skip this in a non-git folder).
+**Acceptance:** both files exist; `grep -c "$HOME" .agent-builder/{agent-name}/plan{suffix}.md`
+prints 0 (the plan holds the literal text `$HOME`, while the shell searches for
+the expanded path); `git check-ignore -q .agent-builder` exits {1 if committed |
+0 if ignored} (skip this in a non-git folder).
 
 ### Step 2: Re-verify fast facts
 
 For every fact in §4, re-check the source. For every UNVERIFIED item, run the
-listed check. If anything changed (a newer major version, a renamed model or
+listed check. Check SDK classes and functions against the installed package
+(for example `python3 -c "from langgraph.graph import StateGraph"`). If anything changed (a newer major version, a renamed model or
 API), **stop and ask** before continuing.
 
 **Acceptance:** §4 values confirmed or amended by the user.
@@ -124,6 +130,10 @@ if decided.)
 
 - **How to run:** `{command}`
 - **Pass threshold:** {…}
+- **Human-graded metrics:** for each one, whether its step **blocks** on it
+  (ask the user for the rating and wait) or **defers** it (owner, trigger,
+  decision ID). {list, or "none"}
+- **On a failing metric:** stop and ask (see §0).
 - **When to run:** {on each change / nightly / before release}
 
 ## 9. Risks and mitigations
@@ -175,6 +185,11 @@ exposes for it.}
 Never write a reason on the user's behalf. If they gave none, write "none
 given".
 
+Every entry carries all seven fields. A single line at the top of the log may
+stand in for **User's stated reason**, **Delegated** and **Status** when
+they're the same for every entry. It never replaces **Question asked** or
+**Recommendation and why**.
+
 ## Mermaid rules
 
 - Use `flowchart LR` (or `TB` for tall hierarchies).
@@ -194,5 +209,17 @@ given".
 - [ ] Every UNVERIFIED fact appears in step 2.
 - [ ] The Mermaid block follows the rules above.
 - [ ] No code block exceeds about 15 lines, and none contains secrets.
-- [ ] Every step has an acceptance check.
+- [ ] Every step has an acceptance check, and every check can pass. None
+      searches for text the plan file itself contains: a `grep` for a string
+      that appears on the check's own line always finds it.
+- [ ] No absolute path under the home directory appears in the plan; write
+      `$HOME` or `~` instead.
+- [ ] Every SDK class or function and every provider API detail (scope,
+      endpoint, quota) named in §6 is in §4 with a source, or on the UNVERIFIED
+      list.
+- [ ] Every guardrail step names each transport or entry point it must cover
+      (every HTTP client, SDK or subprocess the agent uses), and its acceptance
+      check asserts the guardrail on each one.
+- [ ] Every human-graded metric in §8 says block or defer.
+- [ ] Every Appendix A entry has all seven fields (see the decisions.md format).
 - [ ] Step 1 matches the `.agent-builder/` git decision and the versioning rule.

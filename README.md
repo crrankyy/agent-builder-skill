@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/crrankyy/agent-builder-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/crrankyy/agent-builder-skill/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-0.1.0-informational)
+![Version](https://img.shields.io/badge/version-0.2.0-informational)
 
 **Plan an AI agent before any code is written. Claude recommends; you decide
 every choice.**
@@ -165,10 +165,17 @@ blocks two things:
 
 - file writes and edits, except the plan file;
 - shell commands that change state: package installs, mutating `git`, `rm`,
-  `mv`, `cp`, `mkdir`, `touch`, `chmod`, `sed -i`, `tee`, and output redirects
-  into files.
+  `mv`, `cp`, `mkdir`, `touch`, `chmod`, `sed -i`, `tee`, `make`, `wget`,
+  `curl -o`, shell and interpreter scripts, and output redirects into files.
+  Commands inside `sh -c '…'` are checked the same way.
 
-Read-only commands, such as those the project scan uses, still run.
+Read-only commands, such as those the project scan uses, still run. Inline
+interpreter code (`python3 -c`) is allowed, because live lookups pipe `curl`
+into it, so a determined model could still write a file that way.
+
+Once the plan file is known, the guard also holds each question round until the
+previous round's answers are written to the ledger in the plan file. Its state
+lives in `~/.claude/agent-builder/`.
 
 The guard applies only to the planning session that started it. A forked
 session gets a new session ID, so it isn't guarded. It lifts

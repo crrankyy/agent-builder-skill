@@ -1,9 +1,9 @@
 {
-  "description": "agent-builder plan guard: while an agent plan is being drafted, blocks file writes (except the plan file) and state-changing shell commands. Inactive otherwise.",
+  "description": "agent-builder plan guard: while an agent plan is being drafted, blocks file writes (except the plan file) and state-changing shell commands, and holds each question round until the ledger is updated. Inactive otherwise.",
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash|AskUserQuestion",
         "hooks": [
           {
             "type": "command",
