@@ -140,6 +140,9 @@ Asked in P4, after the four framework questions and the pattern decision (see
   each tier**, cited. On OpenRouter, current model slugs with tool-calling
   support and prices.
 - **Conflicts:** tight budget ↔ most-capable tier everywhere.
+- **Naming a family isn't choosing an ID:** if the user named a model or family
+  in free text, still ask that role's exact model ID and whether to pin a
+  version.
 - **Ledger key:** `models.{role}`.
 
 ## F-09 Package and environment manager

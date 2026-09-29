@@ -87,7 +87,6 @@ def skill_text():
         "$ARGUMENTS": REQUEST,
         "${CLAUDE_SKILL_DIR}": "/plugin/skills/agent-builder",
         "${CLAUDE_SESSION_ID}": SESSION,
-        "${CLAUDE_PLUGIN_DATA}": "/plugin-data",
         "${CLAUDE_PLUGIN_ROOT}": "/plugin",
     }
     for key, value in subs.items():

@@ -1,7 +1,7 @@
 # Consistency checks
 
-Run this pass after every question round, and once more at the review gate
-(P6). It compares the new answers with the confirmed purpose (D-00) and every
+Run this pass after every question round from P2 on, and once more at the
+review gate (P6). It compares the new answers with the confirmed purpose (D-00) and every
 earlier decision. A conflict is never resolved by Claude. Show it, then ask.
 
 ## Conflict pairs
@@ -29,12 +29,19 @@ Ask one question per conflict (header `Conflict`). State both sides with their
 decision IDs, then offer:
 
 - **Keep both, accept the risk.** Record the risk in the plan's Risks section.
-- **Change `{decision A}`** (and re-ask it).
+- **Change `{decision A}`** (and re-ask it). When a side is D-00, offer this
+  as **Amend the purpose (reopens D-00)**; never drop it.
 - **Change `{decision B}`** (and re-ask it).
 - **Add a mitigation** (for example a budget cap or an approval gate; follow up).
 
 Recommend the option that preserves the user's explicit hard requirements, and
 say why. Log the resolution as its own decision, linked to both IDs.
+
+A resolution doesn't close the pair. Its constraint (for example "store masked
+fields only") joins D-00's constraints, and every later decision is checked
+against it. That includes the architecture you derive for the plan. An
+accepted option whose own text says it needs the same mitigation is a new
+conflict unless the plan applies that mitigation.
 
 ## Other checks in the pass
 
@@ -43,3 +50,8 @@ say why. Log the resolution as its own decision, linked to both IDs.
   ask.
 - Every "Other" answer has been restated and confirmed.
 - Delegated decisions ("you decide") are marked as delegated, with their scope.
+- No accepted option leaves the user owing an input that hasn't been collected.
+  If an option's trade-off names something the user must supply (a template
+  per bank, a list of accounts, sample files), ask for it.
+- A period named in the purpose or a metric ("monthly total", "daily digest")
+  has a C-13 decision. A period boundary is never a derived detail.

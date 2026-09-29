@@ -16,6 +16,8 @@ planning, cite them, and have the plan re-verify them at execution time.
 - MCP servers: existence, maintainer, install command, auth needs.
 - OpenRouter: model slugs, prices, tool-calling support, API base URL and auth
   header.
+- Third-party provider APIs (Gmail, Slack, Stripe, …): endpoint and method
+  names, OAuth scopes, rate limits and quotas, batch sizes.
 
 ## Canonical sources
 
@@ -33,6 +35,7 @@ host.
 | Python packages | `https://pypi.org/pypi/{package}/json` (`info.version`, `info.requires_python`) |
 | npm packages | `https://registry.npmjs.org/{package}/latest` (`version`) |
 | MCP servers | `https://registry.modelcontextprotocol.io/`, `https://github.com/modelcontextprotocol/servers`, `https://modelcontextprotocol.io/` |
+| Third-party provider APIs | The vendor's own API reference. It isn't pre-approved, so fetching it asks the user for permission; if they decline, the fact is UNVERIFIED |
 
 If the `claude-api` skill is available in the session, prefer it for Claude
 model IDs and API usage, and still cite it.
@@ -40,7 +43,10 @@ model IDs and API usage, and still cite it.
 ## How to look things up reliably
 
 1. **Prefer structured endpoints.** Registry JSON and the OpenRouter models
-   endpoint give exact values. Read the field; don't paraphrase it.
+   endpoint give exact values. Read the field; don't paraphrase it. Cite only
+   what the command printed: a field it didn't output isn't verified. A capped
+   query (`limit=20`, the first page) never becomes a count or a "none exists"
+   claim.
 2. **Ask WebFetch for verbatim quotes.** WebFetch answers through a summarizing
    model that can invent details. Phrase prompts as "Quote verbatim the lines
    that state X". Don't trust a summary that has no quote.
@@ -52,16 +58,27 @@ model IDs and API usage, and still cite it.
 5. **Cite every fact** in the plan as `{fact} (source: {URL}, retrieved
    {YYYY-MM-DD})`.
 
+## Names you didn't look up
+
+Build steps name classes, functions, scopes and endpoints. Any of these that
+wasn't fetched in this session (an SDK class, a checkpointer, a provider's
+OAuth scope or method) is **UNVERIFIED**: add it to §4's UNVERIFIED list. Build
+step 2 then checks it, against the installed package where there is one. Don't
+fetch docs for every name while planning.
+
 ## When a lookup fails
 
 The fetch may be denied, time out, or give contradictory answers. In any of
 these cases:
 
 1. Mark the fact **UNVERIFIED** in the ledger.
-2. Tell the user what couldn't be verified and why.
-3. Ask how to proceed. Options: *Retry the lookup*, *Use a value I provide*, or
-   *Keep it UNVERIFIED and re-check at execution time*. Never substitute a
-   remembered value silently.
+2. Tell the user what couldn't be verified and why. Any option whose text
+   quotes the fact says UNVERIFIED next to it.
+3. Don't ask per fact. At P6, one question (header `Unverified`) lists every
+   UNVERIFIED fact with these options: *Verify now* (retry the lookups), *Defer
+   to build step 2*, or *I'll supply values*. Recommend deferring when no
+   decision depends on the exact value. Never substitute a remembered value
+   silently.
 4. Every UNVERIFIED fact must appear in the plan's step 2 (re-verify facts), with
    the exact check to run.
 

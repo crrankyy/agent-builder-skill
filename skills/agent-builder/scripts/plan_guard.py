@@ -3,7 +3,8 @@
 
 Blocks file writes and state-changing shell commands while an agent-builder
 planning session is active, so nothing is built before the user approves the
-plan. The guard lifts when the plan is approved (ExitPlanMode), when the user
+plan. Once the plan file is known, it also holds each question round until the
+previous round's answers are in the plan file's ledger (rule R8). The guard lifts when the plan is approved (ExitPlanMode), when the user
 types the fallback approval phrase or "exit agent-builder", or on `stop`.
 Standard library only.
 
@@ -17,7 +18,7 @@ Usage:
   plan_guard.py status SESSION [--data-dir D] Print whether SESSION is planning
 
 The marker lives at <data-dir>/planning/<session>.json, where <data-dir> is
---data-dir, else $CLAUDE_PLUGIN_DATA, else ~/.claude/agent-builder. The hook
+--data-dir (used by the tests), else ~/.claude/agent-builder. The hook
 fails open: on any internal error it prints a one-line warning and lets the
 tool call through.
 """
@@ -76,6 +77,15 @@ GIT_MUTATING_FLAGS = {
     "remote": {"add", "remove", "rm", "rename", "set-url", "set-head", "prune"},
 }
 WRAPPERS = {"sudo", "env", "time", "nohup", "nice", "command", "exec", "builtin", "xargs"}
+# Shells: `sh -c '...'` is checked like any other command; a script or stdin is denied.
+SHELLS = {"sh", "bash", "zsh", "dash", "ksh", "fish"}
+# Interpreters, with the short flags that run inline code or a module instead of a
+# script file. ponytail: inline code (python3 -c, node -e) stays allowed because
+# live lookups pipe curl into python3 -c, so inline code can still write files.
+# Deny these flags too if that gap matters more than the lookups.
+INLINE_FLAGS = {"python": "cm", "node": "ep", "ruby": "e", "perl": "eE"}
+# curl short flags that take a value; the rest of a flag cluster is that value.
+CURL_VALUE_FLAGS = set("oXHdAeuFTbEKrmwxyzCQD")
 SEGMENT_BREAKS = {";", "&&", "||", "|", "&", "|&", "(", ")", "{", "}", "$(", "`"}
 REDIRECTS = {">", ">>", ">|", "&>", "&>>"}
 SAFE_TARGETS = {"/dev/null", "/dev/stdout", "/dev/stderr"}
@@ -84,8 +94,10 @@ SAFE_TARGETS = {"/dev/null", "/dev/stdout", "/dev/stderr"}
 # ---------------------------------------------------------------- state
 
 def data_dir(explicit=None):
-    base = explicit or os.environ.get("CLAUDE_PLUGIN_DATA") or os.path.join(
-        os.path.expanduser("~"), ".claude", "agent-builder")
+    # One fixed default rather than $CLAUDE_PLUGIN_DATA: the hook and the skill's
+    # commands don't always see the same environment, and a mismatch would
+    # silently disarm the guard.
+    base = explicit or os.path.join(os.path.expanduser("~"), ".claude", "agent-builder")
     return os.path.join(base, "planning")
 
 
@@ -174,6 +186,51 @@ def _is_guard_call(words):
     return any(w.endswith("plan_guard.py") for w in words)
 
 
+def _shell_command(args):
+    """The command string of `sh -c '...'`, or None if the shell runs a script or stdin."""
+    for i, a in enumerate(args):
+        if not a.startswith("-"):
+            return None
+        if not a.startswith("--") and "c" in a[1:]:
+            return args[i + 1] if i + 1 < len(args) else ""
+    return None
+
+
+def _runs_script_file(args, inline):
+    """True when an interpreter is given a script file rather than inline code."""
+    for a in args:
+        if a == "-" or a in {"--eval", "--print"}:
+            return False
+        if not a.startswith("-"):
+            return True
+        if not a.startswith("--") and set(a[1:]) & set(inline):
+            return False
+    return False
+
+
+def _curl_writes(args):
+    """True if curl is told to save to a file (-o FILE, -O, --output, --remote-name)."""
+    for i, a in enumerate(args):
+        name, _, value = a.partition("=")
+        if name.startswith("--remote-name") or name == "--output-dir":
+            return True
+        if name == "--output":
+            target = value or (args[i + 1] if i + 1 < len(args) else "")
+        elif a.startswith("-") and not a.startswith("--"):
+            flags = a[1:]
+            cut = next((k for k, ch in enumerate(flags) if ch in CURL_VALUE_FLAGS), len(flags))
+            if "O" in flags[:cut]:
+                return True
+            if flags[cut:cut + 1] != "o":
+                continue
+            target = flags[cut + 1:] or (args[i + 1] if i + 1 < len(args) else "")
+        else:
+            continue
+        if target not in SAFE_TARGETS and target != "-":
+            return True
+    return False
+
+
 def risky_reason(command):
     """Return a short reason if the command changes state, else None."""
     try:
@@ -207,6 +264,23 @@ def risky_reason(command):
         if cmd in {"python", "python3"} and len(args) >= 2 and args[0] == "-m" and args[1] in {"pip", "venv"}:
             if args[1] == "venv" or (len(args) > 2 and args[2] in PACKAGE_SUBCOMMANDS["pip"]):
                 return "python -m %s changes the environment" % args[1]
+        if cmd in SHELLS:
+            script = _shell_command(args)
+            if script is None:
+                return "'%s' runs a script" % cmd
+            inner = risky_reason(script)
+            if inner:
+                return inner
+            continue
+        if cmd == "make":
+            return "'make' runs build recipes"
+        if cmd == "wget":
+            return "'wget' downloads files"
+        if cmd == "curl" and _curl_writes(args):
+            return "'curl' saves to a file"
+        lang = re.sub(r"[\d.]+$", "", cmd)
+        if lang in INLINE_FLAGS and _runs_script_file(args, INLINE_FLAGS[lang]):
+            return "'%s' runs a script file" % cmd
         if cmd in PACKAGE_SUBCOMMANDS and args and args[0] in PACKAGE_SUBCOMMANDS[cmd]:
             return "'%s %s' installs or scaffolds packages" % (cmd, args[0])
         if cmd in {"npx", "bunx"} and args and re.match(r"^(create-|@[^/]+/create)", args[0]):
@@ -240,11 +314,15 @@ def risky_reason(command):
 # ---------------------------------------------------------------- hook
 
 def _deny(reason):
+    return _deny_text("agent-builder is still planning, so %s is blocked until you approve the plan. %s"
+                      % (reason, EXIT_HINT))
+
+
+def _deny_text(text):
     json.dump({"hookSpecificOutput": {
         "hookEventName": "PreToolUse",
         "permissionDecision": "deny",
-        "permissionDecisionReason": "agent-builder is still planning, so %s is blocked until you approve the plan. %s"
-                                    % (reason, EXIT_HINT),
+        "permissionDecisionReason": text,
     }}, sys.stdout)
     return 0
 
@@ -309,10 +387,21 @@ def handle_hook(payload):
             write_marker(session, marker)
         return 0
 
+    plan_file = marker.get("plan_file")
+    if tool == "AskUserQuestion" and plan_file:
+        # R8: the last round's answers reach the ledger before the next round.
+        if marker.get("ledger_due"):
+            return _deny_text("agent-builder: write the last round's answers into the planning ledger "
+                              "in %s before asking the next question (rule R8)." % plan_file)
+        marker["ledger_due"] = True
+        write_marker(session, marker)
+        return 0
+
     if tool in WRITE_TOOLS:
         target = tool_input.get("file_path") or tool_input.get("notebook_path") or ""
-        plan_file = marker.get("plan_file")
         if plan_file and _same_path(target, plan_file):
+            if marker.pop("ledger_due", None):
+                write_marker(session, marker)
             return 0
         if not plan_file and payload.get("permission_mode") == "plan" and target:
             plans = os.path.realpath(_default_plans_dir())
